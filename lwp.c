@@ -20,6 +20,8 @@ tid_t lwp_create(lwpfun fun, void *arg) {
         mainsched->init();
     }
 
+    printf("Before getrlimit\n");
+
     struct rlimit rlim;
     unsigned long defaultStackSize = 8 * 1024 * 1024; // 8MB
 
@@ -32,16 +34,16 @@ tid_t lwp_create(lwpfun fun, void *arg) {
         printf("Using a default stack size of %lu bytes\n", defaultStackSize);
     }
 
-    //printf("Comes here");
+    printf("before mmap\n");
 
     //void* s = mmap(NULL, defaultStackSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     void* s = mmap(NULL, defaultStackSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
-
+    printf("Comes here\n");
 
     rfile threadregisters;
 
-    swap_rfiles(NULL, &threadregisters);
+    //swap_rfiles(NULL, &threadregisters);
 
     context* threadcontext = (context*)malloc(sizeof(context));
 
@@ -62,7 +64,7 @@ tid_t lwp_create(lwpfun fun, void *arg) {
 
     s = s + defaultStackSize/(sizeof(unsigned long));
     s-= defaultStackSize;
-    memcpy(s, lwp_wrap, sizeof(void*));
+    //memcpy(s, lwp_wrap, sizeof(void*));
     s-= defaultStackSize;
     threadcontext->state.rbp = (unsigned long)s;
     threadcontext->state.rsp = (unsigned long)s;
@@ -71,11 +73,11 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     return tid_count - 1;
 }
 
-void lwp_wrap (lwpfun fun, void*arg) {
-    int rval;
-    rval = fun(arg);
-    lwp_exit(rval);
-}
+// void lwp_wrap (lwpfun fun, void*arg) {
+//     int rval;
+//     rval = fun(arg);
+//     lwp_exit(rval);
+// }
 
 void lwp_exit(int status) {
 }
