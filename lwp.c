@@ -12,6 +12,9 @@ struct scheduler rr_publish = {rr_init, rr_shutdown, rr_admit, rr_remove, rr_nex
 
 scheduler mainsched = &rr_publish;
 
+//Global linked list of threads
+thread headthread = NULL;
+
 long tid_count = 1;
 
 tid_t lwp_create(lwpfun fun, void *arg) {
@@ -39,7 +42,7 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     //void* s = mmap(NULL, defaultStackSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0);
     void* s = mmap(NULL, defaultStackSize, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 
-    printf("Comes here\n");
+    printf("After mmap\n");
 
     rfile threadregisters;
 
@@ -52,7 +55,7 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     threadcontext->stacksize = defaultStackSize;
     threadcontext->state = threadregisters;
     threadcontext->status = 0;
-    threadcontext->lib_one = NULL;
+    threadcontext->lib_one = NULL; //Using to point to the next thread in the global linked list
     threadcontext->lib_two = NULL;
     threadcontext->sched_one = NULL;
     threadcontext->sched_two = NULL;
@@ -68,6 +71,17 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     s-= defaultStackSize;
     threadcontext->state.rbp = (unsigned long)s;
     threadcontext->state.rsp = (unsigned long)s;
+
+    //Admitting thread to scheduler
+    mainsched->admit(threadcontext);
+    printf("Admitted thread to scheduler\n");
+
+    //Making thread the head of the global linked list
+    if (headthread){
+        threadcontext->lib_one = headthread;  
+    }
+    headthread = threadcontext;  
+    printf("Added thread to global linked list\n"); 
 
     tid_count++;
     return tid_count - 1;
