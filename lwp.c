@@ -87,11 +87,11 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     return tid_count - 1;
 }
 
-// void lwp_wrap (lwpfun fun, void*arg) {
-//     int rval;
-//     rval = fun(arg);
-//     lwp_exit(rval);
-// }
+void lwp_wrap(lwpfun fun, void*arg) {
+    int rval;
+    rval = fun(arg);
+    lwp_exit(rval);
+}
 
 void lwp_exit(int status) {
 }
