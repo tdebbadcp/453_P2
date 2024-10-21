@@ -15,6 +15,9 @@ scheduler mainsched = &rr_publish;
 //Global linked list of threads
 thread headthread = NULL;
 
+//Global linked list of exited threads
+thread headexitedthread = NULL;
+
 long tid_count = 1;
 
 tid_t lwp_create(lwpfun fun, void *arg) {
@@ -94,6 +97,11 @@ void lwp_wrap(lwpfun fun, void*arg) {
 }
 
 void lwp_exit(int status) {
+    //take it out of roundrobin
+    //keep a pointer to the exited thread, use the pointer provided in the context struct
+    //head -> firstexited -> secondexited -> thirdexited -> NULL
+    //if head is null, no one has exited
+    //If head is not null, deallocate what head points to, then make head point to the next exited thread
 }
 
 tid_t lwp_gettid(void) {
@@ -101,13 +109,65 @@ tid_t lwp_gettid(void) {
 }
 
 void lwp_yield(void) {
+    thread nextthread = mainsched->next();
+    if (nextthread){
+        swap_rfiles(NULL , &nextthread ->state);
+    }
+    // else{
+    //     lwp_exit() //Need to work on this
+    // }
 }
 
 void lwp_start(void) {
-    //make thread for the original context and admit 
+    //make thread for the original context(main) and admit 
+
+    struct rlimit rlim;
+    unsigned long defaultStackSize = 8 * 1024 * 1024; // 8MB
+
+    if (getrlimit(RLIMIT_STACK, &rlim) == 0) {
+        printf("Current soft stack limit: %llu\n", rlim.rlim_cur);
+        defaultStackSize = rlim.rlim_cur;
+    
+    } else {
+        perror("getrlimit (soft)");
+        printf("Using a default stack size of %lu bytes\n", defaultStackSize);
+    }
+
+    rfile mainthreadregisters;
+    swap_rfiles(&mainthreadregisters, NULL);
+
+    context* maincontext = (context*)malloc(sizeof(context));
+
+    maincontext->tid = tid_count;
+    maincontext->stack = NULL; // Main thread already has a stack, marking it as NULL
+    maincontext->stacksize = defaultStackSize;
+    maincontext->state = mainthreadregisters;
+    maincontext->status = 0;
+    maincontext->lib_one = NULL; //Using to point to the next thread in the global linked list
+    maincontext->lib_two = NULL;
+    maincontext->sched_one = NULL;
+    maincontext->sched_two = NULL;
+    maincontext->exited = 0;    
+
+    //Admitting main thread to scheduler
+    mainsched->admit(maincontext);
+    printf("Admitted main thread to scheduler\n");
+
+    //Making thread the head of the global linked list
+    if (headthread){
+        maincontext->lib_one = headthread;  
+    }
+    headthread = maincontext;  
+    printf("Added main thread to global linked list\n"); 
+
+    tid_count++;
+
 }
 
 tid_t lwp_wait(int *status) {
+    //See if any thread has exited
+
+    //how to keep track of exited threads? 
     return (tid_t)0;
 }
 
