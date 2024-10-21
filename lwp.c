@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct scheduler rr_publish = {rr_init, rr_shutdown, rr_admit, rr_remove, rr_next, rr_qlen};
-
+//struct scheduler rr_publish = {rr_init, rr_shutdown, rr_admit, rr_remove, rr_next, rr_qlen};
+struct scheduler rr_publish;
 scheduler mainsched = &rr_publish;
 
 //Global linked list of threads
@@ -19,9 +19,9 @@ long tid_count = 1;
 
 tid_t lwp_create(lwpfun fun, void *arg) {
 
-    if (tid_count == 1){
-        mainsched->init();
-    }
+    // if (tid_count == 1){
+    //     mainsched->init();
+    // }
 
     printf("Before getrlimit\n");
 
