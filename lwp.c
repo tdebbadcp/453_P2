@@ -65,15 +65,28 @@ tid_t lwp_create(lwpfun fun, void *arg) {
     threadcontext->exited = 0;    
     
     threadcontext->state.fxsave = FPU_INIT;
-    threadcontext->state.rdi = (unsigned long)fun;
-    threadcontext->state.rsi = (unsigned long)arg;
+    // threadcontext->state.rdi = (unsigned long)fun;
+    // threadcontext->state.rsi = (unsigned long)arg;
 
-    s = s + defaultStackSize/(sizeof(unsigned long));
-    s-= defaultStackSize;
-    //memcpy(s, lwp_wrap, sizeof(void*));
-    s-= defaultStackSize;
-    threadcontext->state.rbp = (unsigned long)s;
-    threadcontext->state.rsp = (unsigned long)s;
+    // s = s + defaultStackSize/(sizeof(unsigned long));
+    // s-= defaultStackSize;
+    // //memcpy(s, lwp_wrap, sizeof(void*));
+    // s-= defaultStackSize;
+    // threadcontext->state.rbp = (unsigned long)s;
+    // threadcontext->state.rsp = (unsigned long)s;
+
+    threadcontext->state.rdi = (unsigned long)arg;
+
+    unsigned long *stack = (unsigned long*)((char*)s + defaultStackSize);
+    stack = (unsigned long *)((unsigned long)stack & ~0xF);  // Align to 16 bytes
+
+    stack -= 1;
+    *stack = (unsigned long)fun;
+
+    printf("base: %p, top (aligned): %p, Function address: %p\n", s, stack, (void*)fun);
+
+    threadcontext->state.rsp = (unsigned long)stack;  
+    threadcontext->state.rbp = (unsigned long)stack;  
 
     //Admitting thread to scheduler
     mainsched->admit(threadcontext);
@@ -109,8 +122,11 @@ tid_t lwp_gettid(void) {
 }
 
 void lwp_yield(void) {
+    printf("inside lwp_yield\n");
     thread nextthread = mainsched->next();
     if (nextthread){
+        printf("Next TID: %ld, rsp: %lx, rbp: %lx\n", 
+                nextthread->tid, nextthread->state.rsp, nextthread->state.rbp);
         swap_rfiles(NULL , &nextthread ->state);
     }
     // else{
@@ -120,7 +136,7 @@ void lwp_yield(void) {
 
 void lwp_start(void) {
     //make thread for the original context(main) and admit 
-
+    printf("inside lwp_start\n");
     struct rlimit rlim;
     unsigned long defaultStackSize = 8 * 1024 * 1024; // 8MB
 
@@ -162,6 +178,9 @@ void lwp_start(void) {
 
     tid_count++;
 
+    //yielding to next thread
+    printf("going to lwp_yield\n");
+    lwp_yield();
 }
 
 tid_t lwp_wait(int *status) {
